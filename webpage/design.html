@@ -42,6 +42,10 @@
     <div class="tab__content">
       <p>
         The system has two pieces. The pen itself uses a Raspberry Pi Zero 2W, which is small enough to fit inside a handheld 3D-printed shell. Inside the pen we have an APDS-9999 color sensor at the tip, an SSD1306 OLED screen that gives the user feedback during a scan, a momentary push button that triggers the scan, and a ring of white LEDs around the sensor to light up the surface being scanned. There was also the plan of a removable cone over the tip that holds the LED light strip and blocks ambient light when the user wants a more "true" reading, or can be left off when the user wants to capture the color as it appears in the current lighting; unfortunately, this part had to be removed before our demo as it was causing issues in the color accuracy.
+      </p>
+      <img src="images/pen_sketch.png">
+      <p style="text-align:center;font-size:0.8em;">Sketches for what the pen shell could look like.</p>  
+      <p>
         The base station is a Raspberry Pi 4. The Pi 4 runs a Python program written with Flask that does two things at the same time: it serves the web dashboard, and it listens for Bluetooth data coming from the pen. Both of these run in parallel using Python's threading module so they don't block each other.
       </p>
       <p>  
@@ -71,9 +75,14 @@
         <b>Exports:</b> We wanted users to actually be able to save their palettes, so we added two export formats. The JPG export uses the Pillow library to draw a grid of colored swatches, each labeled with its hex code and color name. We chose the text color (white or black) for each swatch dynamically based on the brightness of the swatch background, so the labels are always readable. The ASE export was harder. We initially tried a Python library called swatch to generate Adobe palette files, but it kept throwing exceptions during file generation and we couldn't get a clean output. After a few attempts at debugging it, we decided to just write our own ASE writer. The ASE format is fully documented by Adobe; it's a binary format that starts with a 4-byte "ASEF" signature, has a version header and a count of color blocks, then each block contains the color name in UTF-16 big-endian, the literal string "RGB " as the color model, three 4-byte floats for the R, G, and B values, and a 2-byte color type tag. We used Python's struct module to control the byte layout exactly, and our writer produces files that open correctly in Adobe products and most third-party tools.
       </p>
       <img src="images/jpg_export.png">
-      <p>Palette being exported as a JPG image</p>
+      <p style="text-align:center;font-size:0.8em;">Palette being exported as a JPG image</p>
         <b>Dashboard polish and final assembly:</b> Towards the end we focused on making the dashboard look clean. We designed a dark-themed UI with a custom font, sidebar palette layout, and a separate canvas page where users can draw with their saved palette colors. We added a QR code feature so audience phones could pull up the dashboard during the demo. The QR code initially didn't work outside the room because the Pi 4 was picking its public Cornell IP, which is firewalled. We fixed the IP detection function to prefer private network ranges (10.x, 172.x, 192.168.x) so the QR shows a reachable address. The pen shell went through three 3D print iterations and, with some final edits to the circuit, the pen was able to be assembled and work as intended minus the LED light strip and the funnel at the top.
       </p>
+      <img src="images/webpage.png">
+      <p style="text-align:center;font-size:0.8em;">The finalized webpage UI</p>
+      <img src="images/final_pen.png">
+      <img src="images/webpage2.png">
+      <p style="text-align:center;font-size:0.8em;">The finalized webpage UI with palette sidebar open.</p>
       <img src="images/final_pen.png">
       <p style="text-align:center;font-size:0.8em;">The final pen case after being painted.</p>
     </div>
