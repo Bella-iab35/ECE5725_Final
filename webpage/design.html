@@ -72,6 +72,12 @@
       <p>
         <b>Exports:</b> We wanted users to actually be able to save their palettes, so we added two export formats. The JPG export uses the Pillow library to draw a grid of colored swatches, each labeled with its hex code and color name. We chose the text color (white or black) for each swatch dynamically based on the brightness of the swatch background, so the labels are always readable. The ASE export was harder. We initially tried a Python library called swatch to generate Adobe palette files, but it kept throwing exceptions during file generation and we couldn't get a clean output. After a few attempts at debugging it, we decided to just write our own ASE writer. The ASE format is fully documented by Adobe; it's a binary format that starts with a 4-byte "ASEF" signature, has a version header and a count of color blocks, then each block contains the color name in UTF-16 big-endian, the literal string "RGB " as the color model, three 4-byte floats for the R, G, and B values, and a 2-byte color type tag. We used Python's struct module to control the byte layout exactly, and our writer produces files that open correctly in Adobe products and most third-party tools.
       </p>
+      <img src="images/jpg_export.png">
+      <p>Palette being exported as a JPG image</p>
+      <video controls muted class="center"  width="640px" height="360px">
+        <source src="images/ase.mov" type="video/quicktime">
+      </video>
+      <p style="text-align:center;font-size:0.8em;">An .ase file that was exported and sent to an iPad successfully is imported into Procreate.</p>
       <p>  
         <b>Dashboard polish and final assembly:</b> Towards the end we focused on making the dashboard look clean. We designed a dark-themed UI with a custom font, sidebar palette layout, and a separate canvas page where users can draw with their saved palette colors. We added a QR code feature so audience phones could pull up the dashboard during the demo. The QR code initially didn't work outside the room because the Pi 4 was picking its public Cornell IP, which is firewalled. We fixed the IP detection function to prefer private network ranges (10.x, 172.x, 192.168.x) so the QR shows a reachable address. The pen shell went through three 3D print iterations and, with some final edits to the circuit, the pen was able to be assembled and work as intended minus the LED light strip and the funnel at the top.
       </p>
