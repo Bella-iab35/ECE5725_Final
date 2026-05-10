@@ -48,11 +48,99 @@
     </div>
 
     <div class="tab__content">
+      <h2>List of Materials</h3>
+      <table>
+        <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Price</th>
+        </tr>
+        <tr>
+            <td>RaspberryPi 4 (4GB)</td>
+            <td>1</td>
+            <td>$55</td>
+        </tr>
+        <tr>
+            <td>RaspberryPi Zero 2W</td>
+            <td>1</td>
+            <td>$15</td>
+        </tr>   
+        <tr>
+            <td>APDS-9999 RGB Color Sensor</td>
+            <td>1</td>
+            <td>$7</td>
+        </tr>
+        <tr>
+            <td>SSD1306 OLED Display (128x64)</td>
+            <td>1</td>
+            <td>$8</td>
+        </tr>  
+        <tr>
+            <td>Momentary Push Button</td>
+            <td>1</td>
+            <td>$0.95</td>
+        </tr>  
+        <tr>
+            <td>Neutral White LED Strip</td>
+            <td>1</td>
+            <td>$9.90</td>
+        </tr>
+        <tr>
+          <td>Breadboard Power Module</td>
+          <td>1</td>
+          <td>$6</td>
+        </tr> 
+        <tr>
+          <td>Jumper Wires</td>
+          <td>~15</td>
+          <td>$2</td>
+        </tr>
+        <tr>
+          <td>PLA Filament</td>
+          <td>1 spool</td>
+          <td>$20</td>
+        </tr>       
+        <tr>
+            <td>Silver Spray Paint</td>
+            <td>1</td>
+            <td>$10</td>
+        </tr>
+        <tr>
+            <td>MicroSD Card (32GB)</td>
+            <td>1</td>
+            <td>$20</td>
+        </tr>          
+        <tr>
+            <td>MicroSD Card (16GB) + Adapter</td>
+            <td>1</td>
+            <td>$17</td>
+        </tr>          
+        <tr>
+            <td>Total</td>
+            <td></td>
+            <td>$__</td>
+        </tr>          
+      </table>
     </div>  
 
     <div class="tab__content">
-    
+      <p>
+        We worked on the project in roughly six stages.
+        Getting the sensor and OLED running: The first step was just making sure the APDS-9999 and SSD1306 worked. We wired them up on a breadboard and used the Adafruit CircuitPython libraries to talk to them over I²C. Once we could read RGB values from the sensor and draw to the OLED, we knew the basic hardware was working.
+        Bluetooth between the two Pis: Once the pen-side hardware was solid, we needed to get the two Pis talking to each other. We used PyBluez and an RFCOMM socket on channel 1. We had to manually pair the two devices using bluetoothctl first, and we hardcoded the Pi 4's MAC address into the pen's script so it always connects to the same device. This step took longer than expected because we kept running into "address already in use" errors and "connection reset by peer" errors that turned out to be caused by old versions of the script still holding the Bluetooth port from a previous run. We fixed this by writing a clean restart procedure: kill any old processes, restart the Bluetooth service, then start fresh.
+        Color math and naming: With Bluetooth working, we shifted to the math side. We wrote functions for converting RGB to hex, RGB to CMYK, and RGB to HSL. The HSL conversion was important because it lets us calculate complementary and analogous colors easily; we just rotate the hue 180° for complementary or ±30° for analogous, then convert back to RGB. We also added a closest-color-name lookup using a database of about 30,000 named colors from a project on GitHub called meodai/color-names. The lookup treats each color as a 3D point with red, green, and blue as the axes, then loops through every entry in the database and calculates the Euclidean distance to the scanned color. Whichever has the smallest distance is the name we return. This sounds slow but it actually runs in around 50 milliseconds, which is fast enough that the user doesn't notice.
+        Calibration: This was one of the parts we didn't anticipate going in but turned out to be necessary. Our raw sensor readings were systematically biased. A red object would scan as orange, a blue object would scan as light purple, a green object would come out as washed-out mint. We figured out two things were happening. First, the green channel of the APDS-9999 is naturally more sensitive than red and blue, so even pure white paper returned uneven values. Second, even after correcting for that, the secondary channels were still bleeding into each scan, so colors came out desaturated. We fixed the first issue by holding the pen against printer paper, recording the raw readings, and computing per-channel weights that make white come out as white. We fixed the second by adding a saturation transform that raises each normalized channel to the power of 2.5, which keeps the dominant channel near full intensity but pushes the smaller channels closer to zero. After both corrections, scans looked much more accurate.
+        Exports: We wanted users to actually be able to save their palettes, so we added two export formats. The JPG export uses the Pillow library to draw a grid of colored swatches, each labeled with its hex code and color name. We chose the text color (white or black) for each swatch dynamically based on the brightness of the swatch background, so the labels are always readable. The ASE export was harder. We initially tried a Python library called swatch to generate Adobe palette files, but it kept throwing exceptions during file generation and we couldn't get a clean output. After a few attempts at debugging it, we decided to just write our own ASE writer. The ASE format is fully documented by Adobe; it's a binary format that starts with a 4-byte "ASEF" signature, has a version header and a count of color blocks, then each block contains the color name in UTF-16 big-endian, the literal string "RGB " as the color model, three 4-byte floats for the R, G, and B values, and a 2-byte color type tag. We used Python's struct module to control the byte layout exactly, and our writer produces files that open correctly in Adobe products and most third-party tools.
+        Dashboard polish and final assembly: Towards the end we focused on making the dashboard look clean. We designed a dark-themed UI with a custom font, sidebar palette layout, and a separate canvas page where users can draw with their saved palette colors. We added a QR code feature so audience phones could pull up the dashboard during the demo. The QR code initially didn't work outside the room because the Pi 4 was picking its public Cornell IP, which is firewalled. We fixed the IP detection function to prefer private network ranges (10.x, 172.x, 192.168.x) so the QR shows a reachable address. The pen shell went through three 3D print iterations and, with some final edits to the circuit, the pen was able to be assembled and work as intended minus the LED light strip.</p>
     </div>
+
+    <div class="tab__content">
+      <p>
+      The ASE library issue was one of our software roadblocks. We spent some time trying to figure out why the swatch library was failing before deciding it was faster to write our own. Reading the Adobe spec and implementing the byte-level format took a couple hours but gave us full control over the output. Looking back, this was the right decision because we now don't depend on an external library that could break with future Python updates.
+      The calibration problem was most tricky because it wasn't obvious at first that the readings were wrong; the sensor was clearly responding to colors, just not accurately. We figured it out by scanning a piece of white paper and noticing that the raw values weren't equal across channels like they should have been. Once we knew what to look for, the fix was straightforward.
+      Networking was the most frustrating challenge because it wasn't really a code problem. Cornell's eduroam network has client isolation enabled, which means devices on the same network can't talk to each other even if they have valid IPs. Our QR code worked fine on RedRover but not on eduroam, and there was nothing we could do in code to fix that. The actual fix was using a phone hotspot for demos, which gives us an open network we control.
+      Hardware-side, the pen shell went through three 3D print iterations; the first had tolerance issues at the snap-fit joints, the threads didn’t print correctly, and the internal cavities were too tight for the components. The second print, with looser tolerances, allowed for some of the components to fit correctly, but the tolerances for the threads on the middle piece were still too small. With a final edit and print, the pen pieces fit together, but there were issues with fitting the Pi Zero 2W within the pen with the original design that included the power module and battery and the female-to-female header wires added where the pi couldn’t even get inside the piece it was meant to go in. After scrapping the power module and battery, organizing the wires, and finding a new spot for the pi to squeeze into, the pen was able to fit together. Some of the wiring also broke during assembly due to tension in the wires being bent and pulled through the pen, but it only had to be resoldered and have longer heat shrink to ensure the stripped wire was protected completely. Also, due to the method of calibration, the LED light strip had to be scrapped as we ran into issues of it leading to the scanned color being read as green rather than the surface’s true color with the LED light strip helping block ambient light. 
+      </p>
 
 </div>
 
